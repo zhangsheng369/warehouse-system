@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>企业版仓库系统</title>
+
+<style>
+body{
+ background:#eef2f7;
+ font-family:Arial;
+ margin:0;
+ padding:20px;
+}
+
+.login,.panel{
+ background:white;
+ padding:20px;
+ border-radius:12px;
+ max-width:1000px;
+ margin:auto;
+ margin-bottom:20px;
+}
+
+h1{
+ text-align:center;
+}
+
+input,button{
+ padding:10px;
+ margin:5px;
+}
+
+.card{
+ background:#fafafa;
+ padding:15px;
+ margin-top:10px;
+ border-radius:10px;
+ border-left:5px solid #4f46e5;
+}
+
+.low{
+ color:red;
+ font-weight:bold;
+}
+</style>
+</head>
+
+<body>
+
+<div class="login" id="loginBox">
+<h1>企业版仓库系统</h1>
+
+<input id="username" placeholder="账号">
+<input id="password" type="password" placeholder="密码">
+
+<button onclick="login()">登录</button>
+
+<p>默认：admin / 123456</p>
+</div>
+
+<div class="panel" id="system" style="display:none;">
+
+<h2>新增库存</h2>
+
+<input id="model" placeholder="型号">
+<input id="name" placeholder="名称">
+<input id="category" placeholder="分类">
+<input id="stock" type="number" placeholder="库存">
+<input id="min" type="number" placeholder="最低库存">
+
+<button onclick="addItem()">新增</button>
+
+<h2>库存列表</h2>
+
+<div id="list"></div>
+
+<h2>操作日志</h2>
+
+<div id="logs"></div>
+
+</div>
+
+<script>
+
+let token='';
+
+async function login(){
+
+ const res = await fetch('/api/login',{
+   method:'POST',
+   headers:{'Content-Type':'application/json'},
+   body:JSON.stringify({
+     username:document.getElementById('username').value,
+     password:document.getElementById('password').value
+   })
+ });
+
+ const data = await res.json();
+
+ if(data.token){
+
+   token = data.token;
+
+   document.getElementById('loginBox').style.display='none';
+   document.getElementById('system').style.display='block';
+
+   loadItems();
+   loadLogs();
+
+ }else{
+   alert(data.error);
+ }
+}
+
+async function loadItems(){
+
+ const res = await fetch('/api/items',{
+   headers:{authorization:token}
+ });
+
+ const items = await res.json();
+
+ const list = document.getElementById('list');
+
+ list.innerHTML='';
+
+ items.forEach(i=>{
+
+   const low = i.stock < i.min;
+
+   list.innerHTML += `
+   <div class="card">
+     <h3>${i.name}</h3>
+     <p>型号：${i.model}</p>
+     <p>分类：${i.category}</p>
+     <p class="${low?'low':''}">库存：${i.stock}</p>
+     ${low ? '<p class="low">⚠ 库存不足</p>' : ''}
+   </div>
+   `;
+ });
+}
+
+async function addItem(){
+
+ await fetch('/api/add',{
+   method:'POST',
+   headers:{
+    'Content-Type':'application/json',
+    authorization:token
+   },
+   body:JSON.stringify({
+    model:model.value,
+    name:name.value,
+    category:category.value,
+    stock:Number(stock.value),
+    min:Number(min.value)
+   })
+ });
+
+ alert('新增成功');
+
+ loadItems();
+ loadLogs();
+}
+
+async function loadLogs(){
+
+ const res = await fetch('/api/logs',{
+  headers:{authorization:token}
+ });
+
+ const logs = await res.json();
+
+ const div = document.getElementById('logs');
+
+ div.innerHTML='';
+
+ logs.reverse().forEach(l=>{
+
+   div.innerHTML += `
+   <div class="card">
+    <p>${l.time}</p>
+    <p>${l.user}</p>
+    <p>${l.action}</p>
+    <p>${l.model}</p>
+   </div>
+   `;
+ });
+}
+
+</script>
+
+</body>
+</html>

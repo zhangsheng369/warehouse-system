@@ -1,0 +1,16 @@
+[
+  {
+    "model": "A-100",
+    "name": "成品A",
+    "category": "成品",
+    "stock": 120,
+    "min": 50
+  },
+  {
+    "model": "B-200",
+    "name": "胶料B",
+    "category": "胶料",
+    "stock": 20,
+    "min": 100
+  }
+]
