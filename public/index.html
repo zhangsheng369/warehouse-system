@@ -12,6 +12,7 @@ body{
  padding:20px;
 }
 
+
 .login,.panel{
  background:white;
  padding:20px;
@@ -46,6 +47,17 @@ input,button{
 </head>
 
 <body>
+<div style="padding:20px;background:#111;color:#fff;border-radius:10px;margin:20px;">
+  <h2>OCR智能领料识别</h2>
+
+  <input type="file" id="ocrImage" accept="image/*" capture="environment">
+
+  <button onclick="uploadOCR()">
+    上传领料单
+  </button>
+
+  <pre id="ocrResult"></pre>
+</div>
 
 <div class="login" id="loginBox">
 <h1>企业版仓库系统</h1>
@@ -188,6 +200,32 @@ async function loadLogs(){
  });
 }
 
+</script>
+async function uploadOCR() {
+  const fileInput = document.getElementById('ocrImage');
+
+  if (!fileInput.files[0]) {
+    alert('请选择图片');
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append('image', fileInput.files[0]);
+
+  const res = await fetch('/api/ocr-upload', {
+    method: 'POST',
+    body: formData
+  });
+
+  const data = await res.json();
+
+  document.getElementById('ocrResult').innerText =
+    JSON.stringify(data, null, 2);
+
+  alert('OCR识别完成');
+
+  location.reload();
+}
 </script>
 
 </body>

@@ -3,6 +3,8 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
+const multer = require('multer');
+const Tesseract = require('tesseract.js');
 
 const app = express();
 
@@ -96,4 +98,76 @@ app.get('/api/logs',auth,(req,res)=>{
 
 app.listen(PORT,()=>{
   console.log('企业版系统启动成功：http://localhost:3000');
+});
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/')
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + '-' + file.originalname)
+  }
+})
+
+const upload = multer({ storage: storage })
+
+app.post('/api/ocr-upload', upload.single('image'), async (req, res) => {
+  try {
+    const result = await Tesseract.recognize(
+      req.file.path,
+      'chi_sim+eng'
+    );
+
+    const text = result.data.text;
+
+    console.log('OCR识别结果:', text);
+
+    // 自动识别数量
+    const qtyMatch = text.match(/数量[:：]?\s*(\d+)/);
+    const quantity = qtyMatch ? parseInt(qtyMatch[1]) : 0;
+
+    // 自动识别型号
+    const modelMatch = text.match(/型号[:：]?\s*([A-Za-z0-9\-]+)/);
+    const model = modelMatch ? modelMatch[1] : '';
+
+    // 读取库存
+    let inventory = JSON.parse(fs.readFileSync('inventory.json'));
+
+    // 自动扣库存
+    inventory = inventory.map(item => {
+      if (item.name === model) {
+        item.stock = Number(item.stock) - quantity;
+      }
+      return item;
+    });
+
+    fs.writeFileSync('inventory.json', JSON.stringify(inventory, null, 2));
+
+    // 写日志
+    const logs = JSON.parse(fs.readFileSync('logs.json'));
+
+    logs.unshift({
+      type: 'OCR自动出库',
+      model,
+      quantity,
+      time: new Date().toLocaleString()
+    });
+
+    fs.writeFileSync('logs.json', JSON.stringify(logs, null, 2));
+
+    res.json({
+      success: true,
+      text,
+      model,
+      quantity
+    });
+
+  } catch (err) {
+    console.error(err);
+
+    res.status(500).json({
+      success: false,
+      message: 'OCR识别失败'
+    });
+  }
 });
