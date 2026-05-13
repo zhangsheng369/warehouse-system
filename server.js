@@ -13,66 +13,37 @@ const upload = multer({ dest: 'uploads/' });
 /* =========================
    模拟数据库
 ========================= */
-
 let items = [
-  {
-    model: 'A100',
-    name: '测试物料',
-    category: '电子',
-    stock: 50,
-    min: 10
-  }
+  { model: 'A100', name: '测试物料', category: '电子', stock: 50, min: 10 }
 ];
 
 let logs = [
-  {
-    time: new Date().toLocaleString(),
-    user: 'admin',
-    action: '系统初始化',
-    model: 'SYSTEM'
-  }
+  { time: new Date().toLocaleString(), user: 'admin', action: '系统初始化', model: 'SYSTEM' }
 ];
 
 /* =========================
    登录
 ========================= */
-
 app.post('/api/login', (req, res) => {
-
   const { username, password } = req.body;
-
   if (username === 'admin' && password === '123456') {
-
-    return res.json({
-      token: 'admin-token'
-    });
-
+    return res.json({ token: 'admin-token' });
   }
-
-  res.json({
-    error: '账号或密码错误'
-  });
-
+  res.json({ error: '账号或密码错误' });
 });
 
 /* =========================
    获取库存
 ========================= */
-
 app.get('/api/items', (req, res) => {
-
   res.json(items);
-
 });
 
 /* =========================
    新增库存
 ========================= */
-
 app.post('/api/add', (req, res) => {
-
   const item = req.body;
-
   items.push(item);
 
   logs.push({
@@ -82,30 +53,20 @@ app.post('/api/add', (req, res) => {
     model: item.model
   });
 
-  res.json({
-    success: true
-  });
-
+  res.json({ success: true });
 });
 
 /* =========================
    获取日志
 ========================= */
-
 app.get('/api/logs', (req, res) => {
-
   res.json(logs);
-
 });
 
 /* =========================
    启动
 ========================= */
-
 const PORT = process.env.PORT || 3000;
-
 app.listen(PORT, () => {
-
   console.log('server running');
-
 });
