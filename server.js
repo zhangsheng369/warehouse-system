@@ -1,7 +1,6 @@
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
-const Tesseract = require('tesseract.js');
 
 const app = express();
 
@@ -96,35 +95,6 @@ app.post('/api/add', (req, res) => {
 app.get('/api/logs', (req, res) => {
 
   res.json(logs);
-
-});
-
-/* =========================
-   OCR识别
-========================= */
-
-app.post('/api/ocr-upload', upload.single('image'), async (req, res) => {
-
-  try {
-
-    const result = await Tesseract.recognize(
-      req.file.path,
-      'chi_sim+eng'
-    );
-
-    res.json({
-      success: true,
-      text: result.data.text
-    });
-
-  } catch (err) {
-
-    res.json({
-      success: false,
-      error: err.message
-    });
-
-  }
 
 });
 
