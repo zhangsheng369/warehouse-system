@@ -201,31 +201,34 @@ async function loadLogs(){
 }
 
 </script>
+<script>
 async function uploadOCR() {
-  const fileInput = document.getElementById('ocrImage');
 
-  if (!fileInput.files[0]) {
+const fileInput = document.getElementById('ocrImage');
+
+if (!fileInput.files[0]) {
     alert('请选择图片');
     return;
-  }
+}
 
-  const formData = new FormData();
-  formData.append('image', fileInput.files[0]);
+const formData = new FormData();
+formData.append('image', fileInput.files[0]);
 
-  const res = await fetch('/api/ocr-upload', {
+const res = await fetch('/api/ocr-upload', {
     method: 'POST',
     body: formData
-  });
+});
 
-  const data = await res.json();
+const data = await res.json();
 
-  document.getElementById('ocrResult').innerText =
+document.getElementById('ocrResult').innerText =
     JSON.stringify(data, null, 2);
 
-  alert('OCR识别完成');
+alert('OCR识别完成');
 
-  location.reload();
+location.reload();
 }
+</script>
 </script>
 
 </body>
