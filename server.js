@@ -1,3 +1,10 @@
+const { Pool } = require('pg');
+const pool = new Pool({
+  connectionString: 'postgresql://postgres:[YOUR-PASSWORD]@db.kdhbanudissgvtwhzzgq.supabase.co:5432/postgres',
+  ssl: {
+    rejectUnauthorized: false
+  }
+});
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
@@ -66,34 +73,60 @@ app.post('/api/login',(req,res)=>{
   res.json({token, role:user.role});
 });
 
-app.get('/api/items',auth,(req,res)=>{
-  res.json(load(DB_FILE));
+app.get('/api/items', async (req, res) => {
+
+  const result = await pool.query(
+    'SELECT * FROM inventory ORDER BY id DESC'
+  );
+
+  res.json(result.rows);
+
 });
 
-app.post('/api/add',auth,(req,res)=>{
+app.post('/api/add', async (req, res) => {
 
-  const items = load(DB_FILE);
+  const {
+    model,
+    name,
+    category,
+    stock,
+    min
+  } = req.body;
 
-  items.push(req.body);
+  await pool.query(
+    `INSERT INTO inventory
+    (model,name,category,stock,min)
+    VALUES ($1,$2,$3,$4,$5)`,
+    [model,name,category,stock,min]
+  );
 
-  save(DB_FILE,items);
+  await pool.query(
+    `INSERT INTO logs
+    (user_name,action,model,quantity,time)
+    VALUES ($1,$2,$3,$4,$5)`,
+    [
+      'admin',
+      '新增库存',
+      model,
+      stock,
+      new Date().toLocaleString()
+    ]
+  );
 
-  const logs = load(LOG_FILE);
-
-  logs.push({
-    user:req.user.username,
-    action:'新增库存',
-    model:req.body.model,
-    time:new Date().toLocaleString()
+  res.json({
+    success:true
   });
 
-  save(LOG_FILE,logs);
-
-  res.json({success:true});
 });
 
-app.get('/api/logs',auth,(req,res)=>{
-  res.json(load(LOG_FILE));
+app.get('/api/logs', async (req, res) => {
+
+  const result = await pool.query(
+    'SELECT * FROM logs ORDER BY id DESC'
+  );
+
+  res.json(result.rows);
+
 });
 
 app.listen(PORT,()=>{
