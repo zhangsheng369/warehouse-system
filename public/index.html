@@ -95,4 +95,368 @@ body{
   background:#111827;
   padding:40px;
   border-radius:24px;
+  box-shadow:0 20px 50px rgba(0,0,0,0.4);
+}
+
+.login-box h1{
+  text-align:center;
+  margin-bottom:30px;
+}
+
+input{
+  width:100%;
+  padding:14px;
+  border:none;
+  border-radius:12px;
+  margin-bottom:15px;
+  background:#1e293b;
+  color:white;
+  font-size:15px;
+}
+
+input::placeholder{
+  color:#94a3b8;
+}
+
+button{
+  background:#2563eb;
+  color:white;
+  border:none;
+  padding:14px 18px;
+  border-radius:12px;
+  cursor:pointer;
+  font-size:15px;
+  transition:0.3s;
+}
+
+button:hover{
+  background:#1d4ed8;
+}
+
+.card{
+  background:#1e293b;
+  padding:20px;
+  border-radius:18px;
+  margin-bottom:15px;
+  border-left:5px solid #3b82f6;
+}
+
+.card h3{
+  margin-bottom:10px;
+}
+
+.low{
+  color:#ef4444;
+  font-weight:bold;
+}
+
+.flex{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.flex input{
+  flex:1;
+  min-width:180px;
+}
+
+.ocr-box{
+  background:linear-gradient(135deg,#111827,#1e293b);
+  border-radius:20px;
+  padding:25px;
+  margin-bottom:25px;
+}
+
+pre{
+  margin-top:15px;
+  background:#020617;
+  padding:15px;
+  border-radius:12px;
+  overflow:auto;
+  color:#4ade80;
+}
+
+.footer{
+  text-align:center;
+  color:#94a3b8;
+  padding:30px;
+}
+
+@media(max-width:768px){
+
+  .header{
+    flex-direction:column;
+    gap:15px;
+    text-align:center;
+  }
+
+  .stat-value{
+    font-size:28px;
+  }
+
+  .panel{
+    padding:18px;
+  }
+
+  .login-box{
+    margin:30px 15px;
+    padding:25px;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="header">
+  <div class="logo">企业版仓库系统</div>
+  <div class="status">系统在线运行中</div>
+</div>
+
+<div id="loginBox" class="login-box">
+
+<h1>系统登录</h1>
+
+<input id="username" placeholder="请输入账号">
+<input id="password" type="password" placeholder="请输入密码">
+
+<button onclick="login()" style="width:100%;">
+登录系统
+</button>
+
+<br><br>
+
+<p style="text-align:center;color:#94a3b8;">
+默认账号：admin / 123456
+</p>
+
+</div>
+
+<div id="system" style="display:none;">
+
+<div class="container">
+
+<div class="grid">
+
+<div class="stat-card">
+  <div class="stat-title">库存物料数量</div>
+  <div class="stat-value" id="totalItems">0</div>
+</div>
+
+<div class="stat-card">
+  <div class="stat-title">低库存预警</div>
+  <div class="stat-value" id="lowItems">0</div>
+</div>
+
+<div class="stat-card">
+  <div class="stat-title">操作日志数量</div>
+  <div class="stat-value" id="logCount">0</div>
+</div>
+
+</div>
+
+<div class="ocr-box">
+
+<h2>OCR智能领料识别</h2>
+
+<br>
+
+<div class="flex">
+  <input type="file" id="ocrImage" accept="image/*" capture="environment">
+
+  <button onclick="uploadOCR()">
+    上传领料单
+  </button>
+</div>
+
+<pre id="ocrResult"></pre>
+
+</div>
+
+<div class="panel">
+
+<h2>新增库存</h2>
+
+<div class="flex">
+
+<input id="model" placeholder="型号">
+<input id="name" placeholder="名称">
+<input id="category" placeholder="分类">
+<input id="stock" type="number" placeholder="库存">
+<input id="min" type="number" placeholder="最低库存">
+
+<button onclick="addItem()">
+新增
+</button>
+
+</div>
+
+</div>
+
+<div class="panel">
+<h2>库存列表</h2>
+<div id="list"></div>
+</div>
+
+<div class="panel">
+<h2>操作日志</h2>
+<div id="logs"></div>
+</div>
+
+</div>
+
+<div class="footer">
+企业版仓库系统 · Railway 云部署运行中
+</div>
+
+</div>
+
+<script>
+
+let token='';
+
+async function login(){
+
+ const res = await fetch('/api/login',{
+   method:'POST',
+   headers:{'Content-Type':'application/json'},
+   body:JSON.stringify({
+     username:document.getElementById('username').value,
+     password:document.getElementById('password').value
+   })
+ });
+
+ const data = await res.json();
+
+ if(data.token){
+
+   token = data.token;
+
+   document.getElementById('loginBox').style.display='none';
+   document.getElementById('system').style.display='block';
+
+   loadItems();
+   loadLogs();
+
+ }else{
+   alert(data.error);
+ }
+}
+
+async function loadItems(){
+
+ const res = await fetch('/api/items',{
+   headers:{authorization:token}
+ });
+
+ const items = await res.json();
+
+ const list = document.getElementById('list');
+
+ list.innerHTML='';
+
+ let lowCount = 0;
+
+ items.forEach(i=>{
+
+   const low = i.stock < i.min;
+
+   if(low){
+     lowCount++;
+   }
+
+   list.innerHTML += `
+   <div class="card">
+     <h3>${i.name}</h3>
+     <p>型号：${i.model}</p>
+     <p>分类：${i.category}</p>
+     <p class="${low?'low':''}">库存：${i.stock}</p>
+     ${low ? '<p class="low">⚠ 库存不足</p>' : ''}
+   </div>
+   `;
+ });
+
+ document.getElementById('totalItems').innerText = items.length;
+ document.getElementById('lowItems').innerText = lowCount;
+}
+
+async function addItem(){
+
+ await fetch('/api/add',{
+   method:'POST',
+   headers:{
+    'Content-Type':'application/json',
+    authorization:token
+   },
+   body:JSON.stringify({
+    model:model.value,
+    name:name.value,
+    category:category.value,
+    stock:Number(stock.value),
+    min:Number(min.value)
+   })
+ });
+
+ alert('新增成功');
+
+ loadItems();
+ loadLogs();
+}
+
+async function loadLogs(){
+
+ const res = await fetch('/api/logs',{
+  headers:{authorization:token}
+ });
+
+ const logs = await res.json();
+
+ const div = document.getElementById('logs');
+
+ div.innerHTML='';
+
+ document.getElementById('logCount').innerText = logs.length;
+
+ logs.reverse().forEach(l=>{
+
+   div.innerHTML += `
+   <div class="card">
+    <p><b>时间：</b>${l.time}</p>
+    <p><b>用户：</b>${l.user}</p>
+    <p><b>操作：</b>${l.action}</p>
+    <p><b>型号：</b>${l.model}</p>
+   </div>
+   `;
+ });
+}
+
+async function uploadOCR() {
+
+const fileInput = document.getElementById('ocrImage');
+
+if (!fileInput.files[0]) {
+    alert('请选择图片');
+    return;
+}
+
+const formData = new FormData();
+formData.append('image', fileInput.files[0]);
+
+const res = await fetch('/api/ocr-upload', {
+    method: 'POST',
+    body: formData
+});
+
+const data = await res.json();
+
+document.getElementById('ocrResult').innerText =
+    JSON.stringify(data, null, 2);
+
+alert('OCR识别完成');
+}
+
+</script>
+
+</body>
 </html>
